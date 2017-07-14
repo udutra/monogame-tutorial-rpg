@@ -4,13 +4,17 @@ using Microsoft.Xna.Framework.Input;
 
 namespace RPG
 {
-    /// <summary>
-    /// This is the main type for your game.
-    /// </summary>
     public class Game1 : Game
     {
         GraphicsDeviceManager graphics;
         SpriteBatch spriteBatch;
+        Texture2D text;
+        RenderTarget2D rt;
+        Point virtDim, WinDim;
+        Vector2 scale, rtPos;
+        bool isReleased;
+        MagicTexture test;
+
 
         public Game1()
         {
@@ -18,66 +22,93 @@ namespace RPG
             Content.RootDirectory = "Content";
         }
 
-        /// <summary>
-        /// Allows the game to perform any initialization it needs to before starting to run.
-        /// This is where it can query for any required services and load any non-graphic
-        /// related content.  Calling base.Initialize will enumerate through any components
-        /// and initialize them as well.
-        /// </summary>
         protected override void Initialize()
         {
-            // TODO: Add your initialization logic here
-
+            virtDim = new Point(1920, 1080);
+            WinDim = new Point(960, 540);
+            rt = new RenderTarget2D(GraphicsDevice, virtDim.X, virtDim.Y);
             base.Initialize();
+
+            ResizeWindow();
+            CalcScale();
         }
 
-        /// <summary>
-        /// LoadContent will be called once per game and is the place to load
-        /// all of your content.
-        /// </summary>
         protected override void LoadContent()
         {
-            // Create a new SpriteBatch, which can be used to draw textures.
+            //Create a new Spritebatch, wich can be used to draw textures.
             spriteBatch = new SpriteBatch(GraphicsDevice);
-
-            // TODO: use this.Content to load your game content here
+            text = Content.Load<Texture2D>("Imagens/grad");
+            test = new MagicTexture(text, new Rectangle(0, 0, 100, 100), 10, 0.1f, 0);
         }
 
-        /// <summary>
-        /// UnloadContent will be called once per game and is the place to unload
-        /// game-specific content.
-        /// </summary>
         protected override void UnloadContent()
         {
-            // TODO: Unload any non ContentManager content here
+            
         }
 
-        /// <summary>
-        /// Allows the game to run logic such as updating the world,
-        /// checking for collisions, gathering input, and playing audio.
-        /// </summary>
-        /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Update(GameTime gameTime)
         {
+            test.Update(gameTime);
+            if (Keyboard.GetState().IsKeyDown(Keys.U) && isReleased)
+            {
+                WinDim.X = GraphicsDevice.DisplayMode.Width;
+                WinDim.X = GraphicsDevice.DisplayMode.Height;
+                graphics.ToggleFullScreen();
+                isReleased = false;
+                ResizeWindow();
+                CalcScale();
+            }
+            if (Keyboard.GetState().IsKeyUp(Keys.U))
+            {
+                isReleased = true;
+            }
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
+            {
                 Exit();
-
-            // TODO: Add your update logic here
+            }
 
             base.Update(gameTime);
         }
 
-        /// <summary>
-        /// This is called when the game should draw itself.
-        /// </summary>
-        /// <param name="gameTime">Provides a snapshot of timing values.</param>
         protected override void Draw(GameTime gameTime)
         {
-            GraphicsDevice.Clear(Color.CornflowerBlue);
+            //draw on the target
+            GraphicsDevice.SetRenderTarget(rt);
+            spriteBatch.Begin();
+            test.Draw(spriteBatch, Vector2.Zero);
+            spriteBatch.End();
+            GraphicsDevice.SetRenderTarget(null);
 
-            // TODO: Add your drawing code here
+            //draw the target
+            spriteBatch.Begin();
+            spriteBatch.Draw(rt, rtPos, null, scale:scale);
+            spriteBatch.End();
 
             base.Draw(gameTime);
+        }
+
+        public void CalcScale()
+        {
+            float scaleX = (float)WinDim.X / virtDim.X;
+            float scaleY = (float)WinDim.Y / virtDim.Y;
+
+            if(scaleX > scaleY)
+            {
+                scale = new Vector2(scaleY);
+                rtPos = new Vector2((WinDim.X - virtDim.X * scaleY)/2, 0);
+            }
+            else
+            {
+                scale = new Vector2(scaleX);
+                rtPos = new Vector2(0,(WinDim.Y - virtDim.Y * scaleX) / 2);
+            }
+        }
+
+        public void ResizeWindow()
+        {
+            graphics.PreferredBackBufferHeight = WinDim.Y;
+            graphics.PreferredBackBufferWidth = WinDim.X;
+            graphics.ApplyChanges();
         }
     }
 }
