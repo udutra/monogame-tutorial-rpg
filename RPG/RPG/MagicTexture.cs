@@ -4,28 +4,33 @@ using Microsoft.Xna.Framework.Graphics;
 
 namespace RPG
 {
+    public enum Facing {L, R, N};
+
+
     public class MagicTexture
     {
-
+        Facing face;
         Texture2D source;
         Rectangle sourceRect, frame;
         int frameCount, frameCounter;
         float frameTime, frameTimer;
         
 
-        public MagicTexture(Texture2D source_, Rectangle sourceRect_)
+        public MagicTexture(Texture2D source_, Rectangle sourceRect_, Facing face_)
         {
             source = source_;
             sourceRect = sourceRect_;
+            face = face_;
         }
 
-        public MagicTexture(Texture2D source_, Rectangle sourceRect_, int frameCount_, float frameTime_, float delay_)
+        public MagicTexture(Texture2D source_, Rectangle sourceRect_, Facing face_, int frameCount_, float frameTime_, float delay_)
         {
             source = source_;
             sourceRect = sourceRect_;
             frameCount = frameCount_;
             frameTime = frameTime_;
             frameTimer += delay_;
+            face = face_;
         }
         
         public void Update(GameTime gt_)
