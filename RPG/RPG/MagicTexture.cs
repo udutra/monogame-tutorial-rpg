@@ -11,7 +11,7 @@ namespace RPG
     {
         Facing face;
         Texture2D source;
-        Rectangle sourceRect, frame;
+        public Rectangle sourceRect, frame;
         int frameCount, frameCounter;
         float frameTime, frameTimer;
         
@@ -21,6 +21,7 @@ namespace RPG
             source = source_;
             sourceRect = sourceRect_;
             face = face_;
+            frame = sourceRect_;
         }
 
         public MagicTexture(Texture2D source_, Rectangle sourceRect_, Facing face_, int frameCount_, float frameTime_, float delay_)
@@ -31,6 +32,7 @@ namespace RPG
             frameTime = frameTime_;
             frameTimer += delay_;
             face = face_;
+            frame = sourceRect_;
         }
         
         public void Update(GameTime gt_)

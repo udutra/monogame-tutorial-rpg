@@ -12,10 +12,11 @@ namespace RPG
         Texture2D text;
         RenderTarget2D rt;
         Point virtDim, WinDim;
-        Vector2 scale, rtPos, translation;
-        bool isReleased;
-        Tile[,] tiles;
-        MagicTexture test;
+        Vector2 scale, rtPos, translation, mousePos;
+        Tileset ts;
+        float translationSpeed;
+        KeyboardState kbs;
+        MagicTexture cursor;
 
         public Game1()
         {
@@ -26,6 +27,7 @@ namespace RPG
         protected override void Initialize()
         {
             translation = new Vector2(-400, -400);
+            translationSpeed = 5f;
             virtDim = new Point(1920, 1080);
             WinDim = new Point(960, 540);
             rt = new RenderTarget2D(GraphicsDevice, virtDim.X, virtDim.Y);
@@ -39,8 +41,9 @@ namespace RPG
         {
             spriteBatch = new SpriteBatch(GraphicsDevice);
             text = Content.Load<Texture2D>("Imagens/tile");
-            tiles = new Tile[10, 10];
-            test = new MagicTexture(text, new Rectangle(0,0,text.Width, text.Height), Facing.N);
+            cursor = new MagicTexture(Content.Load<Texture2D>("Imagens/cursor"), new Rectangle(0,0,100,100),Facing.L);
+            Tile[,] tiles = new Tile[10, 10];
+            MagicTexture test = new MagicTexture(text, new Rectangle(0,0,text.Width, text.Height), Facing.N);
             for(int x = 0; x < 10; x++)
             {
                 for (int y = 0; y < 10; y++)
@@ -48,7 +51,7 @@ namespace RPG
                     tiles[x, y] = new Tile(test, new Vector2(x * 100 - y * 100, x * 50 + y * 50));
                 }
             }
-
+            ts = new Tileset(tiles, 10,10,200,100);
         }
 
         protected override void UnloadContent()
@@ -58,28 +61,17 @@ namespace RPG
 
         protected override void Update(GameTime gameTime)
         {
-            test.Update(gameTime);
-            
+            kbs = Keyboard.GetState();
+            UpdateMousePos();
+            MouseAct();
+            UpdateTranslation();
+
             if (GamePad.GetState(PlayerIndex.One).Buttons.Back == ButtonState.Pressed || Keyboard.GetState().IsKeyDown(Keys.Escape))
             {
                 Exit();
             }
-            KeyboardState kbs = Keyboard.GetState();
-            if (kbs.IsKeyDown(Keys.Up)){
-                translation.Y += 1;
-            }
-            if (kbs.IsKeyDown(Keys.Down))
-            {
-                translation.Y -= 1;
-            }
-            if (kbs.IsKeyDown(Keys.Left))
-            {
-                translation.X += 1;
-            }
-            if (kbs.IsKeyDown(Keys.Right))
-            {
-                translation.X -= 1;
-            }
+            
+            
 
             base.Update(gameTime);
         }
@@ -90,13 +82,10 @@ namespace RPG
             Matrix translator = Matrix.CreateTranslation(translation.X, translation.Y,0);
             GraphicsDevice.SetRenderTarget(rt);
             spriteBatch.Begin(transformMatrix: translator);
-            for (int x = 0; x < 10; x++)
-            {
-                for (int y = 0; y < 10; y++)
-                {
-                    tiles[x, y].Draw(spriteBatch);
-                }
-            }
+
+            ts.Draw(spriteBatch);
+
+            cursor.Draw(spriteBatch, mousePos);
             spriteBatch.End();
             GraphicsDevice.SetRenderTarget(null);
 
@@ -132,9 +121,48 @@ namespace RPG
             graphics.PreferredBackBufferWidth = WinDim.X;
             graphics.ApplyChanges();
         }
+
+        public void UpdateMousePos()
+        {
+            Vector2 originalPos = Mouse.GetState().Position.ToVector2();
+            originalPos.X *= 1/scale.X;
+            originalPos.Y *= 1/scale.Y;
+            mousePos = originalPos;
+            mousePos += translation * -1;
+            
+        }
+
+        public void MouseAct()
+        {
+
+        }
+
+        public void UpdateTranslation()
+        {
+            if (kbs.IsKeyDown(Keys.Up))
+            {
+                translation.Y += translationSpeed;
+            }
+            if (kbs.IsKeyDown(Keys.Down))
+            {
+                translation.Y -= translationSpeed;
+            }
+            if (kbs.IsKeyDown(Keys.Left))
+            {
+                translation.X += translationSpeed;
+            }
+            if (kbs.IsKeyDown(Keys.Right))
+            {
+                translation.X -= translationSpeed;
+            }
+        }
     }
 }
+
+
+
 /*
+ * bool isReleased;
  * if (Keyboard.GetState().IsKeyDown(Keys.U) && isReleased)
             {
                 WinDim.X = GraphicsDevice.DisplayMode.Width;

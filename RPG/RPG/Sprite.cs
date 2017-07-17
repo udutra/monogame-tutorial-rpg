@@ -11,7 +11,7 @@ namespace RPG
     public class Sprite
     {
 
-        MagicTexture tex;
+        public MagicTexture tex;
         public Vector2 pos;
 
         public Sprite(MagicTexture tex_, Vector2 pos_)
@@ -30,5 +30,13 @@ namespace RPG
             tex.Update(gt_);
         }
 
+        public Rectangle GetFrame()
+        {
+            Rectangle rec = tex.frame;
+            rec.X += (int) pos.X;
+            rec.Y += (int) pos.Y;
+
+            return rec;
+        }
     }
 }
