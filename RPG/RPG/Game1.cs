@@ -7,24 +7,27 @@ using System.Xml.Linq;
 namespace RPG
 {
     enum GameMode {TilesetEditor, Game, Menus}
-
+    enum DrawPhase { Trans, NonTrans}
     public class Game1 : Game
     {
         private GameMode gm;
+        private DrawPhase dPhase;
         private Keys k_SaveTileset;
         private GraphicsDeviceManager graphics;
         private SpriteBatch spriteBatch;
         private Texture2D tex;
-        private RenderTarget2D rt;
+        private RenderTarget2D rt, nonTransRt;
         private Point virtDim, WinDim;
         private Vector2 scale, rtPos, translation, mousePos;
+        private Tile currentTile;
         private Tileset ts;
         private Button b;
         private KeyboardState kbs;
         private MagicTexture cursor;
         private float translationSpeed;
         private bool isReleased, p_SaveTileset, pb_SaveTileset;
-        private string tileName;
+        private String[] tileNames;
+        private int tileIndex;
 
 
         public Game1()
@@ -40,6 +43,7 @@ namespace RPG
             virtDim = new Point(1920, 1080);
             WinDim = new Point(960, 540);
             rt = new RenderTarget2D(GraphicsDevice, virtDim.X, virtDim.Y);
+            nonTransRt = new RenderTarget2D(GraphicsDevice, virtDim.X, virtDim.Y);
             base.Initialize();
 
             SetupKeys();
@@ -58,7 +62,8 @@ namespace RPG
 
         protected override void UnloadContent()
         {
-            
+            rt.Dispose();
+            nonTransRt.Dispose();
         }
 
         protected override void Update(GameTime gameTime)
@@ -96,7 +101,9 @@ namespace RPG
 
         protected override void Draw(GameTime gameTime)
         {
-            //draw on the target
+            dPhase = DrawPhase.Trans;
+
+            //draw translated stuff on the target
             Matrix translator = Matrix.CreateTranslation(translation.X, translation.Y, 0);
             GraphicsDevice.SetRenderTarget(rt);
             spriteBatch.Begin(transformMatrix: translator);
@@ -120,16 +127,43 @@ namespace RPG
                     }
             }
 
+            spriteBatch.End();
+
+            dPhase = DrawPhase.NonTrans;
+            GraphicsDevice.SetRenderTarget(nonTransRt);
+            GraphicsDevice.Clear(Color.TransparentBlack);
+            spriteBatch.Begin();
+
+            switch (gm)
+            {
+                case (GameMode.TilesetEditor):
+                    {
+                        DrawEditor();
+                        break;
+                    }
+                case (GameMode.Game):
+                    {
+                        DrawGame();
+                        break;
+                    }
+                case (GameMode.Menus):
+                    {
+                        DrawMenus();
+                        break;
+                    }
+            }
             cursor.Draw(spriteBatch, mousePos);
             spriteBatch.End();
+            
+            //draw overlay
             GraphicsDevice.SetRenderTarget(null);
-
-            //draw the target
+            
+            //draw the non translated target
             Matrix scaler = Matrix.CreateScale(scale.X, scale.Y, 0);
-            spriteBatch.Begin(transformMatrix:scaler);
+            spriteBatch.Begin(transformMatrix: scaler);
             spriteBatch.Draw(rt, rtPos, null);
+            spriteBatch.Draw(nonTransRt, rtPos, null);
             spriteBatch.End();
-
             base.Draw(gameTime);
         }
 
@@ -163,7 +197,7 @@ namespace RPG
             originalPos.X *= 1/scale.X;
             originalPos.Y *= 1/scale.Y;
             mousePos = originalPos;
-            mousePos += translation * -1;
+            //mousePos += translation * -1;
             if(Mouse.GetState().LeftButton == ButtonState.Released)
             {
                 isReleased = true;
@@ -199,26 +233,35 @@ namespace RPG
             }
             if (IsClicking())
             {
-                Point closest = new Point(0, 0);
-                float closestDist = 1000;
+                bool switched = false;
+                if (currentTile.GetFrame().Contains(mousePos)){
+                    ToggleSelectedTile();
+                    switched = true;
+                }
 
-                for (int x = 0; x < ts.GetWidth(); x++)
+                if (!switched)
                 {
-                    for (int y = 0; y < ts.GetHeight(); y++)
-                    {
-                        float dist = Vector2.Distance(mousePos, ts.GetTiles()[x, y].GetMiddle());
+                    Point closest = new Point(0, 0);
+                    float closestDist = 1000;
 
-                        if (dist < closestDist)
+                    for (int x = 0; x < ts.GetWidth(); x++)
+                    {
+                        for (int y = 0; y < ts.GetHeight(); y++)
                         {
-                            closestDist = dist;
-                            closest = new Point(x, y);
+                            float dist = Vector2.Distance(GetMousePos(), ts.GetTiles()[x, y].GetMiddle());
+
+                            if (dist < closestDist)
+                            {
+                                closestDist = dist;
+                                closest = new Point(x, y);
+                            }
                         }
                     }
-                }
-                if(ts.GetTiles()[closest.X, closest.Y].GetFrame().Contains(mousePos))
-                {
-                    ts.GetTiles()[closest.X, closest.Y] = GetTile("Imagens/tile2");
-                    ts.PlaceTiles();
+                    if (ts.GetTiles()[closest.X, closest.Y].GetFrame().Contains(GetMousePos()))
+                    {
+                        ts.GetTiles()[closest.X, closest.Y] = GetTile(tileNames[tileIndex]);
+                        ts.PlaceTiles();
+                    }
                 }
             }
         }
@@ -230,7 +273,7 @@ namespace RPG
 
         private void UpdateMenus(GameTime gt_)
         {
-            if (b.GetFrame().Contains(mousePos) && IsClicking())
+            if (b.GetFrame().Contains(GetMousePos()) && IsClicking())
             {
                 gm = GameMode.TilesetEditor;
                 SetupTSE();
@@ -240,23 +283,46 @@ namespace RPG
         private void SetupTSE()
         {
             tex = Content.Load<Texture2D>("Imagens/tile");
-
+            tileIndex = 0;
+            tileNames = new string[] { "Imagens/tile", "Imagens/tile2" };
+            currentTile = GetTile(tileNames[tileIndex]);
             ts = GetTileSet();
         }
 
         private void DrawEditor()
         {
-            ts.Draw(spriteBatch);
+            if (dPhase == DrawPhase.Trans)
+            {
+                ts.Draw(spriteBatch);
+            }
+            else{
+                currentTile.Draw(spriteBatch);
+            }
         }
 
         private void DrawGame()
         {
-            throw new NotImplementedException();
+            if (dPhase == DrawPhase.Trans)
+            {
+                
+            }
+            else
+            {
+                
+            }
         }
 
         private void DrawMenus()
         {
-            b.Draw(spriteBatch);
+            if (dPhase == DrawPhase.Trans)
+            {
+                
+            }
+            else
+            {
+                b.Draw(spriteBatch);
+            }
+            
         }
 
         private bool IsClicking()
@@ -284,7 +350,7 @@ namespace RPG
                 tiles2[x, y] = new Tile(ttt, Vector2.Zero);
             }
 
-            return new Tileset(tiles2, tx, ty,200,100);
+            return new Tileset(tiles2, tx, ty, 200, 100);
         }
 
         private void SetupKeys()
@@ -315,6 +381,21 @@ namespace RPG
         {
             MagicTexture ttt = new MagicTexture(Content.Load<Texture2D>(tileName_), new Rectangle(0, 0, 200, 100), Facing.N);
             return new Tile(ttt, Vector2.Zero);
+        }
+
+        private Vector2 GetMousePos()
+        {
+            return mousePos + translation * -1;
+        }
+
+        public void ToggleSelectedTile()
+        {
+            tileIndex++;
+            if(tileIndex >= tileNames.Length)
+            {
+                tileIndex = 0;
+            }
+            currentTile = GetTile(tileNames[tileIndex]);
         }
     }
 }
