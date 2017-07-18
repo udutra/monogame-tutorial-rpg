@@ -8,11 +8,11 @@ namespace RPG
 
     public class MagicTexture
     {
-        Facing face;
-        Texture2D source;
-        public Rectangle sourceRect, frame;
-        int frameCount, frameCounter;
-        float frameTime, frameTimer;
+        private Facing face;
+        private Texture2D source;
+        private Rectangle sourceRect, frame;
+        private int frameCount, frameCounter;
+        private float frameTime, frameTimer;
         
 
         public MagicTexture(Texture2D source_, Rectangle sourceRect_, Facing face_)
@@ -55,6 +55,16 @@ namespace RPG
             frame = new Rectangle(sourceRect.X + frameCounter * sourceRect.Width, sourceRect.Y, sourceRect.Width, sourceRect.Height);
             
             sb_.Draw(source, sourceRectangle:frame, position:pos_);
+        }
+
+        public Vector2 GetMiddle()
+        {
+            return new Vector2(frame.Width / 2, frame.Height / 2);
+        }
+
+        public Rectangle GetFrame()
+        {
+            return frame;
         }
     }
 }

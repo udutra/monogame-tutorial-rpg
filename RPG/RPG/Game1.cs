@@ -3,27 +3,29 @@ using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
 using System.Xml.Linq;
-using System.Collections.Generic;
 
 namespace RPG
 {
-    enum GameMode {  TilesetEditor, Game, Menus }
+    enum GameMode {TilesetEditor, Game, Menus}
 
     public class Game1 : Game
     {
-        GameMode gm;
-        GraphicsDeviceManager graphics;
-        SpriteBatch spriteBatch;
-        Texture2D tex;
-        RenderTarget2D rt;
-        Point virtDim, WinDim;
-        Vector2 scale, rtPos, translation, mousePos;
-        Tileset ts;
-        float translationSpeed;
-        KeyboardState kbs;
-        MagicTexture cursor;
-        bool isReleased;
-        Button b;
+        private GameMode gm;
+        private Keys k_SaveTileset;
+        private GraphicsDeviceManager graphics;
+        private SpriteBatch spriteBatch;
+        private Texture2D tex;
+        private RenderTarget2D rt;
+        private Point virtDim, WinDim;
+        private Vector2 scale, rtPos, translation, mousePos;
+        private Tileset ts;
+        private Button b;
+        private KeyboardState kbs;
+        private MagicTexture cursor;
+        private float translationSpeed;
+        private bool isReleased, p_SaveTileset, pb_SaveTileset;
+        private string tileName;
+
 
         public Game1()
         {
@@ -40,6 +42,7 @@ namespace RPG
             rt = new RenderTarget2D(GraphicsDevice, virtDim.X, virtDim.Y);
             base.Initialize();
 
+            SetupKeys();
             ResizeWindow();
             CalcScale();
         }
@@ -61,6 +64,7 @@ namespace RPG
         protected override void Update(GameTime gameTime)
         {
             kbs = Keyboard.GetState();
+            UpdateKeys();
             UpdateMouse();
 
             switch (gm)
@@ -129,7 +133,7 @@ namespace RPG
             base.Draw(gameTime);
         }
 
-        public void CalcScale()
+        private void CalcScale()
         {
             float scaleX = (float)WinDim.X / virtDim.X;
             float scaleY = (float)WinDim.Y / virtDim.Y;
@@ -146,14 +150,14 @@ namespace RPG
             }
         }
 
-        public void ResizeWindow()
+        private void ResizeWindow()
         {
             graphics.PreferredBackBufferHeight = WinDim.Y;
             graphics.PreferredBackBufferWidth = WinDim.X;
             graphics.ApplyChanges();
         }
 
-        public void UpdateMouse()
+        private void UpdateMouse()
         {
             Vector2 originalPos = Mouse.GetState().Position.ToVector2();
             originalPos.X *= 1/scale.X;
@@ -166,7 +170,7 @@ namespace RPG
             }
         }
 
-        public void UpdateTranslation()
+        private void UpdateTranslation()
         {
             if (kbs.IsKeyDown(Keys.Up))
             {
@@ -186,17 +190,45 @@ namespace RPG
             }
         }
 
-        public void UpdateEditor(GameTime gt_)
+        private void UpdateEditor(GameTime gt_)
         {
             UpdateTranslation();
+            if(p_SaveTileset)
+            {
+                //save
+            }
+            if (IsClicking())
+            {
+                Point closest = new Point(0, 0);
+                float closestDist = 1000;
+
+                for (int x = 0; x < ts.GetWidth(); x++)
+                {
+                    for (int y = 0; y < ts.GetHeight(); y++)
+                    {
+                        float dist = Vector2.Distance(mousePos, ts.GetTiles()[x, y].GetMiddle());
+
+                        if (dist < closestDist)
+                        {
+                            closestDist = dist;
+                            closest = new Point(x, y);
+                        }
+                    }
+                }
+                if(ts.GetTiles()[closest.X, closest.Y].GetFrame().Contains(mousePos))
+                {
+                    ts.GetTiles()[closest.X, closest.Y] = GetTile("Imagens/tile2");
+                    ts.PlaceTiles();
+                }
+            }
         }
 
-        public void UpdateGame(GameTime gt_)
+        private void UpdateGame(GameTime gt_)
         {
 
         }
 
-        public void UpdateMenus(GameTime gt_)
+        private void UpdateMenus(GameTime gt_)
         {
             if (b.GetFrame().Contains(mousePos) && IsClicking())
             {
@@ -205,18 +237,18 @@ namespace RPG
             }
         }
 
-        public void DrawEditor()
-        {
-            ts.Draw(spriteBatch);
-        }
-
-        public void SetupTSE()
+        private void SetupTSE()
         {
             tex = Content.Load<Texture2D>("Imagens/tile");
 
             ts = GetTileSet();
         }
-        
+
+        private void DrawEditor()
+        {
+            ts.Draw(spriteBatch);
+        }
+
         private void DrawGame()
         {
             throw new NotImplementedException();
@@ -227,17 +259,17 @@ namespace RPG
             b.Draw(spriteBatch);
         }
 
-        public bool IsClicking()
+        private bool IsClicking()
         {
             if (Mouse.GetState().LeftButton == ButtonState.Pressed && isReleased)
             {
-                return true;
                 isReleased = false;
+                return true;
             }
             return false;
         }
 
-        public Tileset GetTileSet()
+        private Tileset GetTileSet()
         {
             XDocument doc = XDocument.Load("Content/XML/TestTileset.xml");
             int tx = int.Parse(doc.Element("Tileset").Attribute("x").Value);
@@ -249,14 +281,40 @@ namespace RPG
                 MagicTexture ttt = new MagicTexture(Content.Load<Texture2D>(tile.Value), new Rectangle(0,0,200,100), Facing.N);
                 int x = int.Parse(tile.Attribute("x").Value);
                 int y = int.Parse(tile.Attribute("y").Value);
-                tiles2[x, y] = new Tile(ttt, new Vector2(x * 100 - y * 100, x * 50 + y * 50));
+                tiles2[x, y] = new Tile(ttt, Vector2.Zero);
+            }
+
+            return new Tileset(tiles2, tx, ty,200,100);
+        }
+
+        private void SetupKeys()
+        {
+            k_SaveTileset = Keys.S;
+        }
+
+        private void UpdateKeys()
+        {
+            if (kbs.IsKeyUp(k_SaveTileset))
+            {
+                pb_SaveTileset = false;
+            }
+
+            if (kbs.IsKeyDown(k_SaveTileset) && !pb_SaveTileset)
+            {
+                pb_SaveTileset = true;
+                p_SaveTileset = true;
             }
             
+            else if (kbs.IsKeyDown(k_SaveTileset))
+            {
+                p_SaveTileset = false;
+            }
+        }
 
-
-            
-            
-            return new Tileset(tiles2, tx, ty,200,100);
+        public Tile GetTile(string tileName_)
+        {
+            MagicTexture ttt = new MagicTexture(Content.Load<Texture2D>(tileName_), new Rectangle(0, 0, 200, 100), Facing.N);
+            return new Tile(ttt, Vector2.Zero);
         }
     }
 }
